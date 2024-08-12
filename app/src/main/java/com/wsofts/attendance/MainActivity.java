@@ -19,6 +19,8 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -127,23 +129,36 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void addNewClassToFirebase(String classCode ,String className, String description) {
+    private void addNewClassToFirebase(String classCode, String className, String description) {
+        FirebaseAuth auth = FirebaseAuth.getInstance();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        ClassModel newClass = new ClassModel();
-        newClass.setClassCode(classCode);
-        newClass.setClassName(className);
-        newClass.setDescription(description);
 
-        db.collection("Class")
-                .add(newClass)
-                .addOnSuccessListener(documentReference -> {
-                    String documentId = documentReference.getId();
-                    newClass.setClassId(documentId);
-                    db.collection("Class").document(documentId).set(newClass);
-                    fetchClassesData();
-                })
-                .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "Failed to add class", Toast.LENGTH_SHORT).show());
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser != null) {
+            String lecturerUid = currentUser.getUid();
+            DocumentReference lecturerRef = db.collection("Lecturer").document(lecturerUid);
+
+            ClassModel newClass = new ClassModel();
+            newClass.setClassCode(classCode);
+            newClass.setClassName(className);
+            newClass.setDescription(description);
+            newClass.setLecturerId(lecturerRef);  // Set the lecturerId as a DocumentReference
+
+            db.collection("Class")
+                    .add(newClass)
+                    .addOnSuccessListener(documentReference -> {
+                        String documentId = documentReference.getId();
+                        newClass.setClassId(documentId);
+                        db.collection("Class").document(documentId).set(newClass);
+                        fetchClassesData();
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(MainActivity.this, "Failed to add class", Toast.LENGTH_SHORT).show());
+        } else {
+            Toast.makeText(MainActivity.this, "User not logged in", Toast.LENGTH_SHORT).show();
+        }
     }
+
+
 
     private void updateClassInFirebase(String classId, String classCode ,String className, String description) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -154,26 +169,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void fetchClassesData() {
+        FirebaseAuth auth = FirebaseAuth.getInstance();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        db.collection("Class")
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        QuerySnapshot result = task.getResult();
-                        if (result != null) {
-                            classList.clear();
-                            for (DocumentSnapshot document : result) {
-                                ClassModel classModel = document.toObject(ClassModel.class);
-                                if (classModel != null) {
-                                    classModel.setClassId(document.getId());
-                                    classList.add(classModel);
+
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser != null) {
+            String lecturerUid = currentUser.getUid();
+            DocumentReference lecturerRef = db.collection("Lecturer").document(lecturerUid);
+
+            db.collection("Class")
+                    .whereEqualTo("lecturerId", lecturerRef)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            QuerySnapshot result = task.getResult();
+                            if (result != null) {
+                                classList.clear();
+                                for (DocumentSnapshot document : result) {
+                                    ClassModel classModel = document.toObject(ClassModel.class);
+                                    if (classModel != null) {
+                                        classModel.setClassId(document.getId());
+                                        classList.add(classModel);
+                                    }
                                 }
+                                classesAdapter.notifyDataSetChanged();
                             }
-                            classesAdapter.notifyDataSetChanged();
+                        } else {
+                            Toast.makeText(MainActivity.this, "Error fetching classes data", Toast.LENGTH_SHORT).show();
                         }
-                    } else {
-                        Toast.makeText(MainActivity.this, "Error fetching classes data", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                    });
+        } else {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+        }
     }
 }

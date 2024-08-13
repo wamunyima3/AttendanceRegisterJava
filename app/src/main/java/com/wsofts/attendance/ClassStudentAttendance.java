@@ -27,7 +27,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
 
     private RecyclerView attendanceRecyclerView;
     private AttendanceAdapter attendanceAdapter;
-    private List<AttendanceModel> attendanceList = new ArrayList<>();
+    private final List<AttendanceModel> attendanceList = new ArrayList<>();
     private String classId;
 
     @Override
@@ -79,15 +79,40 @@ public class ClassStudentAttendance extends AppCompatActivity {
                                 List<String> dateHeaders = new ArrayList<>();
 
                                 for (DocumentSnapshot document : result) {
-                                    AttendanceModel attendanceModel = new AttendanceModel();
-                                    attendanceModel.setStudentId(document.getDocumentReference("studentId"));
-                                    attendanceModel.setAttendanceStatusByDate(new HashMap<>());
-
-                                    // Process date and status
+                                    DocumentReference studentRef = document.getDocumentReference("studentId");
                                     Timestamp timestamp = document.getTimestamp("date");
-                                    if (timestamp != null) {
+                                    String status = document.getString("status");
+
+                                    if (timestamp != null && studentRef != null) {
                                         String dateString = timestamp.toDate().toString(); // Adjust format as needed
-                                        String status = document.getString("status");
+
+                                        // Check if AttendanceModel for the student already exists
+                                        AttendanceModel attendanceModel = null;
+                                        for (AttendanceModel model : attendanceList) {
+                                            if (model.getStudentId().equals(studentRef)) {
+                                                attendanceModel = model;
+                                                break;
+                                            }
+                                        }
+
+                                        if (attendanceModel == null) {
+                                            attendanceModel = new AttendanceModel();
+                                            attendanceModel.setStudentId(studentRef);
+                                            attendanceModel.setAttendanceStatusByDate(new HashMap<>());
+                                            attendanceList.add(attendanceModel);
+
+                                            // Fetch student name using studentId
+                                            AttendanceModel finalAttendanceModel = attendanceModel;
+                                            studentRef.get().addOnCompleteListener(studentTask -> {
+                                                if (studentTask.isSuccessful()) {
+                                                    DocumentSnapshot studentDoc = studentTask.getResult();
+                                                    if (studentDoc != null) {
+                                                        finalAttendanceModel.setStudentName(studentDoc.getString("name"));
+                                                        attendanceAdapter.notifyDataSetChanged();
+                                                    }
+                                                }
+                                            });
+                                        }
 
                                         // Populate model and headers
                                         attendanceModel.getAttendanceStatusByDate().put(dateString, status);
@@ -95,19 +120,6 @@ public class ClassStudentAttendance extends AppCompatActivity {
                                             dateHeaders.add(dateString);
                                         }
                                     }
-
-                                    // Fetch student name using studentId
-                                    DocumentReference studentRef = attendanceModel.getStudentId();
-                                    studentRef.get().addOnCompleteListener(studentTask -> {
-                                        if (studentTask.isSuccessful()) {
-                                            DocumentSnapshot studentDoc = studentTask.getResult();
-                                            if (studentDoc != null) {
-                                                attendanceModel.setStudentName(studentDoc.getString("name"));
-                                                attendanceList.add(attendanceModel);
-                                                attendanceAdapter.notifyDataSetChanged();
-                                            }
-                                        }
-                                    });
                                 }
 
                                 // Set adapter with the new data

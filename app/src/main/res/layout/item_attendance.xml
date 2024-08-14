@@ -1,31 +1,47 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<!--item_attendance.xml-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="horizontal"
-    android:padding="8dp">
+    android:paddingLeft="8dp"
+    android:layout_marginBottom="8dp"
+    android:paddingRight="8dp">
 
     <TextView
         android:id="@+id/student_id"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:text="@string/id"
+        android:layout_marginEnd="10dp"
+
         android:textSize="18sp" />
 
     <TextView
         android:id="@+id/student_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:text="@string/student_name"
+        android:layout_toEndOf="@+id/student_id"
+        android:layout_marginEnd="10dp"
         android:textSize="18sp" />
 
-    <!-- Container for dynamic date columns -->
-    <LinearLayout
-        android:id="@+id/date_container"
-        android:layout_width="0dp"
+    <!-- RecyclerView for dynamic date columns -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/date_recycler_view"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="4"
+        android:layout_toEndOf="@+id/student_name"
         android:orientation="horizontal" />
-</LinearLayout>
+
+    <!-- Bottom Border -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:background="@android:color/darker_gray"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_below="@+id/student_name"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+</RelativeLayout>

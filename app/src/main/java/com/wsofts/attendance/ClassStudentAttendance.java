@@ -19,9 +19,11 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 public class ClassStudentAttendance extends AppCompatActivity {
 
@@ -84,9 +86,9 @@ public class ClassStudentAttendance extends AppCompatActivity {
                                     String status = document.getString("status");
 
                                     if (timestamp != null && studentRef != null) {
-                                        String dateString = timestamp.toDate().toString(); // Adjust format as needed
+                                        String dateString = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                                                .format(timestamp.toDate());
 
-                                        // Check if AttendanceModel for the student already exists
                                         AttendanceModel attendanceModel = null;
                                         for (AttendanceModel model : attendanceList) {
                                             if (model.getStudentId().equals(studentRef)) {
@@ -101,7 +103,6 @@ public class ClassStudentAttendance extends AppCompatActivity {
                                             attendanceModel.setAttendanceStatusByDate(new HashMap<>());
                                             attendanceList.add(attendanceModel);
 
-                                            // Fetch student name using studentId
                                             AttendanceModel finalAttendanceModel = attendanceModel;
                                             studentRef.get().addOnCompleteListener(studentTask -> {
                                                 if (studentTask.isSuccessful()) {
@@ -114,15 +115,15 @@ public class ClassStudentAttendance extends AppCompatActivity {
                                             });
                                         }
 
-                                        // Populate model and headers
-                                        attendanceModel.getAttendanceStatusByDate().put(dateString, status);
-                                        if (!dateHeaders.contains(dateString)) {
-                                            dateHeaders.add(dateString);
+                                        if (!attendanceModel.getAttendanceStatusByDate().containsKey(dateString)) {
+                                            attendanceModel.getAttendanceStatusByDate().put(dateString, status);
+                                            if (!dateHeaders.contains(dateString)) {
+                                                dateHeaders.add(dateString);
+                                            }
                                         }
                                     }
                                 }
 
-                                // Set adapter with the new data
                                 attendanceAdapter = new AttendanceAdapter(attendanceList, dateHeaders, this);
                                 attendanceRecyclerView.setAdapter(attendanceAdapter);
                             }
@@ -134,5 +135,6 @@ public class ClassStudentAttendance extends AppCompatActivity {
             Toast.makeText(this, "Class ID not found", Toast.LENGTH_SHORT).show();
         }
     }
+
 
 }

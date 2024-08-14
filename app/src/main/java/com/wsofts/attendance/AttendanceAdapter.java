@@ -8,6 +8,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
@@ -37,30 +38,10 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
         holder.studentName.setText(attendanceModel.getStudentName());
         holder.studentId.setText(attendanceModel.getStudentId().getId());
 
-        // Clear the container first to avoid duplications
-        holder.dateContainer.removeAllViews();
-
-        // Dynamically populate attendance status for each date
-        for (String date : dateHeaders) {
-            String status = attendanceModel.getAttendanceStatusByDate().get(date);
-
-            // Create a new TextView for each date's status
-            TextView statusView = new TextView(context);
-            statusView.setTextSize(18);
-            statusView.setPadding(8, 8, 8, 8);
-            statusView.setText(status != null ? status : "N/A");
-
-            // Optionally, add some layout parameters to align TextViews properly
-            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-            );
-            layoutParams.setMargins(8, 0, 8, 0); // Add some margin if necessary
-            statusView.setLayoutParams(layoutParams);
-
-            // Add the status view to the date container
-            holder.dateContainer.addView(statusView);
-        }
+        // Setup inner RecyclerView for date columns
+        DateAdapter dateAdapter = new DateAdapter(context, dateHeaders, attendanceModel.getAttendanceStatusByDate());
+        holder.dateRecyclerView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false));
+        holder.dateRecyclerView.setAdapter(dateAdapter);
     }
 
 
@@ -72,13 +53,13 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
     public static class AttendanceViewHolder extends RecyclerView.ViewHolder {
         TextView studentId;
         TextView studentName;
-        ViewGroup dateContainer; // ViewGroup to hold dynamic date columns
+        RecyclerView dateRecyclerView; // RecyclerView to hold dynamic date columns
 
         public AttendanceViewHolder(@NonNull View itemView) {
             super(itemView);
             studentName = itemView.findViewById(R.id.student_name);
             studentId = itemView.findViewById(R.id.student_id);
-            dateContainer = itemView.findViewById(R.id.date_container); // Assume you have a LinearLayout or other ViewGroup here
+            dateRecyclerView = itemView.findViewById(R.id.date_recycler_view); // Find the nested RecyclerView
         }
     }
 }

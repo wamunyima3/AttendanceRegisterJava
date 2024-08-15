@@ -15,4 +15,5 @@
     <string name="class_name">Class Name</string>
     <string name="id">Id</string>
     <string name="student_name">Student Name</string>
+    <string name="update_information">Update Information</string>
 </resources>

@@ -4,12 +4,17 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
 
@@ -42,8 +47,30 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
         DateAdapter dateAdapter = new DateAdapter(context, dateHeaders, attendanceModel.getAttendanceStatusByDate());
         holder.dateRecyclerView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false));
         holder.dateRecyclerView.setAdapter(dateAdapter);
-    }
 
+        holder.deleteButton.setOnClickListener(v -> {
+            // Remove item from list
+            attendanceList.remove(position);
+            notifyItemRemoved(position);
+            notifyItemRangeChanged(position, attendanceList.size());
+
+            // Implement Firebase deletion logic
+            FirebaseFirestore.getInstance()
+                    .collection("Attendance")
+                    .whereEqualTo("classId", attendanceModel.getClassId())
+                    .whereEqualTo("studentId", attendanceModel.getStudentId())
+                    .get()
+                    .addOnSuccessListener(queryDocumentSnapshots -> {
+                        for (DocumentSnapshot document : queryDocumentSnapshots) {
+                            document.getReference().delete();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(context, "Error deleting record", Toast.LENGTH_SHORT).show();
+                    });
+        });
+
+    }
 
     @Override
     public int getItemCount() {
@@ -53,13 +80,16 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
     public static class AttendanceViewHolder extends RecyclerView.ViewHolder {
         TextView studentId;
         TextView studentName;
-        RecyclerView dateRecyclerView; // RecyclerView to hold dynamic date columns
+        RecyclerView dateRecyclerView;
+        ImageButton deleteButton; // Reference to the delete button
 
         public AttendanceViewHolder(@NonNull View itemView) {
             super(itemView);
             studentName = itemView.findViewById(R.id.student_name);
             studentId = itemView.findViewById(R.id.student_id);
-            dateRecyclerView = itemView.findViewById(R.id.date_recycler_view); // Find the nested RecyclerView
+            dateRecyclerView = itemView.findViewById(R.id.date_recycler_view);
+            deleteButton = itemView.findViewById(R.id.delete_button); // Initialize the delete button
         }
     }
+
 }

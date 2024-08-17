@@ -40,7 +40,7 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
     @Override
     public void onBindViewHolder(@NonNull AttendanceViewHolder holder, int position) {
         AttendanceModel attendanceModel = attendanceList.get(position);
-        holder.studentName.setText(attendanceModel.getStudentName());
+//        holder.studentName.setText(attendanceModel.getStudentName());
         holder.studentId.setText(attendanceModel.getStudentId().getId());
 
         // Setup inner RecyclerView for date columns
@@ -79,13 +79,13 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
 
     public static class AttendanceViewHolder extends RecyclerView.ViewHolder {
         TextView studentId;
-        TextView studentName;
+//        TextView studentName;
         RecyclerView dateRecyclerView;
         ImageButton deleteButton; // Reference to the delete button
 
         public AttendanceViewHolder(@NonNull View itemView) {
             super(itemView);
-            studentName = itemView.findViewById(R.id.student_name);
+//            studentName = itemView.findViewById(R.id.student_name);
             studentId = itemView.findViewById(R.id.student_id);
             dateRecyclerView = itemView.findViewById(R.id.date_recycler_view);
             deleteButton = itemView.findViewById(R.id.delete_button); // Initialize the delete button

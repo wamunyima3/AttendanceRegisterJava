@@ -15,7 +15,9 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -34,6 +36,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
     private final List<AttendanceModel> attendanceList = new ArrayList<>();
     private String classId;
     private String className;
+    private BottomNavigationView bottomNavigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,22 +56,14 @@ public class ClassStudentAttendance extends AppCompatActivity {
         setupRecyclerView();
         fetchAttendanceData();
         setupToolbar();
-
-
-        Button markAttendanceButton = findViewById(R.id.markAttendanceButton);
-        markAttendanceButton.setOnClickListener(view -> {
-            Intent intent = new Intent(ClassStudentAttendance.this, MarkAttendance.class);
-            intent.putExtra("classId", classId);
-            intent.putExtra("className", className);
-            startActivity(intent);
-        });
+        setupBottomNavigationView();
 
     }
 
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle(className + "Attendance");
+        getSupportActionBar().setTitle(className + " Attendance");
     }
 
     private void setupRecyclerView() {
@@ -148,6 +143,27 @@ public class ClassStudentAttendance extends AppCompatActivity {
         } else {
             Toast.makeText(this, "Class ID not found", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void setupBottomNavigationView() {
+        bottomNavigationView = findViewById(R.id.bottom_navigation);
+        bottomNavigationView.setOnNavigationItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.nav_mark_attendance) {
+                Intent intent = new Intent(ClassStudentAttendance.this, MarkAttendance.class);
+                intent.putExtra("classId", classId);
+                intent.putExtra("className", className);
+                startActivity(intent);
+                finish();
+                return true;
+            } else if (itemId == R.id.nav_add_students) {
+                //Open file picker to pick excel/csv file of students
+                return true;
+            } else {
+                return false;
+            }
+        });
+
     }
 
 

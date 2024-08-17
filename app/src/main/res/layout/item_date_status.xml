@@ -1,10 +1,15 @@
 <!--item_date_status.xml-->
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/date_status"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:layout_margin="2dp"
     android:gravity="center"
-    android:textSize="18sp"
-    android:layout_marginEnd="10dp"
-    android:textColor="@android:color/white" />
-
+    app:cardCornerRadius="8dp">
+    <TextView
+        android:id="@+id/date_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:textSize="18sp" />
+</androidx.cardview.widget.CardView>

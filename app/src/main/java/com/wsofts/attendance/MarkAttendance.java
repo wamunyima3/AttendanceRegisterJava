@@ -1,8 +1,10 @@
 package com.wsofts.attendance;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,9 +20,11 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MarkAttendance extends AppCompatActivity {
 
@@ -29,6 +33,7 @@ public class MarkAttendance extends AppCompatActivity {
     private List<StudentModel> studentList = new ArrayList<>();
     private String classId;
     private String className;
+    private Date currentDate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,14 +53,18 @@ public class MarkAttendance extends AppCompatActivity {
         setupRecyclerView();
         fetchStudentsData();
 
+
         Button saveButton = findViewById(R.id.markAttendanceSaveButton);
-        saveButton.setOnClickListener(view -> saveAttendance());
+        saveButton.setOnClickListener(view -> checkAndSaveAttendance());
     }
 
     private void setupToolbar() {
+        currentDate = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault());
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setTitle(className);
+        getSupportActionBar().setSubtitle(sdf.format(currentDate));
     }
 
     private void setupRecyclerView() {
@@ -103,9 +112,8 @@ public class MarkAttendance extends AppCompatActivity {
         }
     }
 
-    private void saveAttendance() {
+    private void checkAndSaveAttendance() {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        Date currentDate = new Date();  // Get the current date
 
         for (StudentModel student : studentList) {
             String status = student.getAttendanceStatus();
@@ -113,12 +121,41 @@ public class MarkAttendance extends AppCompatActivity {
                 DocumentReference classRef = db.collection("Class").document(classId);
                 DocumentReference studentRef = db.collection("Student").document(student.getStudentId());
 
-                // Create a new attendance record with the current date
-                db.collection("Attendance").add(new MarkAttendanceModel(classRef, studentRef, status, currentDate))
-                        .addOnSuccessListener(documentReference -> Toast.makeText(MarkAttendance.this, "Attendance saved!", Toast.LENGTH_SHORT).show())
-                        .addOnFailureListener(e -> Toast.makeText(MarkAttendance.this, "Error saving attendance", Toast.LENGTH_SHORT).show());
+                db.collection("Attendance")
+                        .whereEqualTo("classId", classRef)
+                        .whereEqualTo("studentId", studentRef)
+                        .whereEqualTo("date", currentDate)
+                        .get()
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                if (task.getResult().isEmpty()) {
+                                    // No existing record, save a new one
+                                    saveAttendanceRecord(classRef, studentRef, status);
+                                } else {
+                                    // Record exists, allow editing or update
+                                    Toast.makeText(MarkAttendance.this, "Attendance already marked for today. You can edit it.", Toast.LENGTH_SHORT).show();
+                                }
+                            } else {
+                                Toast.makeText(MarkAttendance.this, "Error checking attendance", Toast.LENGTH_SHORT).show();
+                            }
+                        });
             }
         }
     }
 
+    private void saveAttendanceRecord(DocumentReference classRef, DocumentReference studentRef, String status) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        db.collection("Attendance")
+                .add(new MarkAttendanceModel(classRef, studentRef, status, currentDate))
+                .addOnSuccessListener(documentReference -> {
+                    Toast.makeText(MarkAttendance.this, "Attendance saved!", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(this, ClassStudentAttendance.class);
+                    intent.putExtra("classId", classId);
+                    intent.putExtra("className", className);
+                    startActivity(intent);
+                    finish();
+                })
+                .addOnFailureListener(e -> Toast.makeText(MarkAttendance.this, "Error saving attendance", Toast.LENGTH_SHORT).show());
+    }
 }

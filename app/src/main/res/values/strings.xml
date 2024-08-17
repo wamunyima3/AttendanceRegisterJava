@@ -21,4 +21,7 @@
     <string name="s">S</string>
     <string name="a">A</string>
     <string name="p">P</string>
+    <string name="date">Date</string>
+    <string name="mark_attendance">Mark Attendance</string>
+    <string name="add_stduents">Add Stduents</string>
 </resources>

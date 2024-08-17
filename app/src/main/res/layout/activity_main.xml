@@ -5,7 +5,6 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
     tools:context=".MainActivity">
 
     <!-- Toolbar for Title and Actions -->
@@ -20,7 +19,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:background="@drawable/background_gradient"
         app:title="Classes"
-        app:subtitle="Manage your classes"
         app:subtitleTextColor="@android:color/white"
         app:titleTextColor="@android:color/white" />
 

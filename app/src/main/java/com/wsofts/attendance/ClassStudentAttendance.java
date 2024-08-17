@@ -1,8 +1,8 @@
 package com.wsofts.attendance;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.Timestamp;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -29,8 +28,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.InputStream;
+import java.util.Map;
+
 public class ClassStudentAttendance extends AppCompatActivity {
 
+    private static final int FILE_SELECT_CODE = 1;
     private RecyclerView attendanceRecyclerView;
     private AttendanceAdapter attendanceAdapter;
     private final List<AttendanceModel> attendanceList = new ArrayList<>();
@@ -158,6 +164,10 @@ public class ClassStudentAttendance extends AppCompatActivity {
                 return true;
             } else if (itemId == R.id.nav_add_students) {
                 //Open file picker to pick excel/csv file of students
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                startActivityForResult(intent, FILE_SELECT_CODE);
+
                 return true;
             } else {
                 return false;
@@ -165,6 +175,91 @@ public class ClassStudentAttendance extends AppCompatActivity {
         });
 
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == FILE_SELECT_CODE && resultCode == RESULT_OK) {
+            Uri uri = data.getData();
+            try {
+                InputStream inputStream = getContentResolver().openInputStream(uri);
+                importExcelData(inputStream);
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Error opening file", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+
+    public void importExcelData(InputStream inputStream) {
+        try {
+            Workbook workbook = new XSSFWorkbook(inputStream);
+            Sheet sheet = workbook.getSheetAt(0);
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) {
+                    // Skip the header row
+                    continue;
+                }
+
+                // Get the id, which might be a numeric cell
+                String id = "";
+                Cell idCell = row.getCell(0);
+                if (idCell.getCellType() == CellType.NUMERIC) {
+                    id = String.valueOf((long) idCell.getNumericCellValue());
+                } else if (idCell.getCellType() == CellType.STRING) {
+                    id = idCell.getStringCellValue();
+                }
+
+                // Get the email, name, and phoneNumber, which should be string cells
+                String email = row.getCell(1).getStringCellValue();
+                String name = row.getCell(2).getStringCellValue();
+                String phoneNumber = "";
+                Cell phoneCell = row.getCell(3);
+                if (phoneCell.getCellType() == CellType.NUMERIC) {
+                    phoneNumber = String.valueOf((long) phoneCell.getNumericCellValue());
+                } else if (phoneCell.getCellType() == CellType.STRING) {
+                    phoneNumber = phoneCell.getStringCellValue();
+                }
+
+                // Add to Firestore Student collection
+                Map<String, Object> studentData = new HashMap<>();
+                studentData.put("email", email);
+                studentData.put("name", name);
+                studentData.put("phoneNumber", phoneNumber);
+
+                DocumentReference studentRef = db.collection("Student").document(id);
+                DocumentReference classRef = db.collection("Class").document(classId);
+                studentRef.set(studentData).addOnSuccessListener(aVoid -> {
+                    // Add to ClassStudent collection
+                    Map<String, Object> classStudentData = new HashMap<>();
+                    classStudentData.put("classId", classRef);
+                    classStudentData.put("studentId", studentRef);
+
+                    db.collection("ClassStudent").add(classStudentData)
+                            .addOnSuccessListener(documentReference -> {
+                                // Success
+                                Toast.makeText(ClassStudentAttendance.this, "Data added successfully!", Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(e -> {
+                                // Handle failure
+                                Toast.makeText(ClassStudentAttendance.this, "Error adding ClassStudent data", Toast.LENGTH_SHORT).show();
+                            });
+                }).addOnFailureListener(e -> {
+                    // Handle failure
+                    Toast.makeText(ClassStudentAttendance.this, "Error adding Student data", Toast.LENGTH_SHORT).show();
+                });
+            }
+            workbook.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(ClassStudentAttendance.this, "Error reading Excel file " + e.toString(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
 
 
 }

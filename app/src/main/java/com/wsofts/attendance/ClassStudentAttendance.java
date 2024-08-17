@@ -1,6 +1,8 @@
 package com.wsofts.attendance;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -31,6 +33,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
     private AttendanceAdapter attendanceAdapter;
     private final List<AttendanceModel> attendanceList = new ArrayList<>();
     private String classId;
+    private String className;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +42,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
         setContentView(R.layout.activity_class_student_attendance);
 
         classId = getIntent().getStringExtra("classId");
+        className = getIntent().getStringExtra("className");
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -49,12 +53,22 @@ public class ClassStudentAttendance extends AppCompatActivity {
         setupRecyclerView();
         fetchAttendanceData();
         setupToolbar();
+
+
+        Button markAttendanceButton = findViewById(R.id.markAttendanceButton);
+        markAttendanceButton.setOnClickListener(view -> {
+            Intent intent = new Intent(ClassStudentAttendance.this, MarkAttendance.class);
+            intent.putExtra("classId", classId);
+            intent.putExtra("className", className);
+            startActivity(intent);
+        });
+
     }
 
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("Attendance Records");
+        getSupportActionBar().setTitle(className + "Attendance");
     }
 
     private void setupRecyclerView() {

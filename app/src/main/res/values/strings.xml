@@ -16,4 +16,9 @@
     <string name="id">Id</string>
     <string name="student_name">Student Name</string>
     <string name="update_information">Update Information</string>
+    <string name="save_attendance">Save Attendance</string>
+    <string name="ap">AP</string>
+    <string name="s">S</string>
+    <string name="a">A</string>
+    <string name="p">P</string>
 </resources>

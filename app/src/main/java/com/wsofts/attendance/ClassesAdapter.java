@@ -42,6 +42,7 @@ public class ClassesAdapter extends RecyclerView.Adapter<ClassesAdapter.ClassVie
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, ClassStudentAttendance.class);
             intent.putExtra("classId", classModel.getClassId());
+            intent.putExtra("className", classModel.getClassName());
             context.startActivity(intent);
         });
 

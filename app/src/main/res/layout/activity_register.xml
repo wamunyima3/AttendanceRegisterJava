@@ -2,108 +2,89 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/background_gradient"
     android:padding="24dp"
     tools:context=".Register">
 
-    <ImageView
-        android:id="@+id/logo"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:src="@drawable/baseline_checklist_24"
-        android:contentDescription="@string/app_name"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/firstname"
-        android:layout_marginBottom="32dp"
-        android:scaleType="fitCenter"
-        app:tint="@android:color/white" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-    <EditText
-        android:id="@+id/firstname"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:hint="@string/firstname"
-        android:importantForAutofill="no"
-        android:inputType="textPersonName"
-        android:textColor="@android:color/white"
-        android:textColorHint="@android:color/darker_gray"
-        android:backgroundTint="@android:color/white"
-        app:layout_constraintTop_toBottomOf="@id/logo"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="1.0"
-        android:padding="12dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp">
 
-    <EditText
-        android:id="@+id/surname"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:hint="@string/surname"
-        android:importantForAutofill="no"
-        android:inputType="textPersonName"
-        android:textColor="@android:color/white"
-        android:textColorHint="@android:color/darker_gray"
-        android:backgroundTint="@android:color/white"
-        app:layout_constraintTop_toBottomOf="@id/firstname"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="1.0"
-        android:padding="12dp" />
+            <!-- App Logo -->
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:src="@drawable/baseline_checklist_24"
+                android:contentDescription="@string/app_name"
+                android:layout_marginBottom="32dp"
+                android:scaleType="fitCenter"
+                app:tint="#FF6F00" />
 
-    <EditText
-        android:id="@+id/email"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:hint="@string/email"
-        android:importantForAutofill="no"
-        android:inputType="textEmailAddress"
-        android:textColor="@android:color/white"
-        android:textColorHint="@android:color/darker_gray"
-        android:backgroundTint="@android:color/white"
-        app:layout_constraintTop_toBottomOf="@id/surname"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="1.0"
-        android:padding="12dp" />
+            <!-- First Name Input -->
+            <EditText
+                android:id="@+id/firstname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/firstname"
+                android:importantForAutofill="no"
+                android:inputType="textPersonName"
+                android:padding="12dp"
+                android:layout_marginTop="16dp" />
 
-    <EditText
-        android:id="@+id/password"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:hint="@string/password"
-        android:importantForAutofill="no"
-        android:inputType="textPassword"
-        android:textColor="@android:color/white"
-        android:textColorHint="@android:color/darker_gray"
-        android:backgroundTint="@android:color/white"
-        app:layout_constraintTop_toBottomOf="@id/email"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="1.0"
-        android:padding="12dp" />
+            <!-- Surname Input -->
+            <EditText
+                android:id="@+id/surname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/surname"
+                android:importantForAutofill="no"
+                android:inputType="textPersonName"
+                android:padding="12dp"
+                android:layout_marginTop="16dp" />
 
-    <Button
-        android:id="@+id/register_button"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/register"
-        android:textColor="@android:color/white"
-        android:background="@drawable/button_background"
-        app:layout_constraintTop_toBottomOf="@id/password"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="1.0"
-        android:layout_marginTop="24dp"
-        android:padding="12dp" />
+            <!-- Email Input -->
+            <EditText
+                android:id="@+id/email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/email"
+                android:importantForAutofill="no"
+                android:inputType="textEmailAddress"
+                android:padding="12dp"
+                android:layout_marginTop="16dp" />
 
+            <!-- Password Input -->
+            <EditText
+                android:id="@+id/password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/password"
+                android:importantForAutofill="no"
+                android:inputType="textPassword"
+                android:padding="12dp"
+                android:layout_marginTop="16dp" />
+
+            <!-- Register Button -->
+            <Button
+                android:id="@+id/register_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/register"
+                android:textColor="@android:color/white"
+                android:background="@drawable/button_background"
+                android:padding="12dp"
+                android:layout_marginTop="24dp" />
+
+        </LinearLayout>
+    </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.List;
 
@@ -40,7 +41,6 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
     @Override
     public void onBindViewHolder(@NonNull AttendanceViewHolder holder, int position) {
         AttendanceModel attendanceModel = attendanceList.get(position);
-//        holder.studentName.setText(attendanceModel.getStudentName());
         holder.studentId.setText(attendanceModel.getStudentId().getId());
 
         // Setup inner RecyclerView for date columns
@@ -55,19 +55,7 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
             notifyItemRangeChanged(position, attendanceList.size());
 
             // Implement Firebase deletion logic
-            FirebaseFirestore.getInstance()
-                    .collection("Attendance")
-                    .whereEqualTo("classId", attendanceModel.getClassId())
-                    .whereEqualTo("studentId", attendanceModel.getStudentId())
-                    .get()
-                    .addOnSuccessListener(queryDocumentSnapshots -> {
-                        for (DocumentSnapshot document : queryDocumentSnapshots) {
-                            document.getReference().delete();
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(context, "Error deleting record", Toast.LENGTH_SHORT).show();
-                    });
+            deleteStudentFromClass(attendanceModel.getStudentId().getId(), attendanceModel.getClassId().getId());
         });
 
     }
@@ -79,17 +67,57 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
 
     public static class AttendanceViewHolder extends RecyclerView.ViewHolder {
         TextView studentId;
-//        TextView studentName;
         RecyclerView dateRecyclerView;
         ImageButton deleteButton; // Reference to the delete button
 
         public AttendanceViewHolder(@NonNull View itemView) {
             super(itemView);
-//            studentName = itemView.findViewById(R.id.student_name);
             studentId = itemView.findViewById(R.id.student_id);
             dateRecyclerView = itemView.findViewById(R.id.date_recycler_view);
             deleteButton = itemView.findViewById(R.id.delete_button); // Initialize the delete button
         }
     }
 
+    private void deleteStudentFromClass(String studentId, String classId) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Step 1: Delete student from attendance records
+        db.collection("Attendance")
+                .whereEqualTo("studentId", "/Student/" + studentId)
+                .whereEqualTo("classId", "/Class/" + classId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            db.collection("Attendance").document(document.getId()).delete();
+                        }
+                    }
+                });
+
+        // Step 2: Remove student from the class
+        db.collection("ClassStudent")
+                .whereEqualTo("studentId", "/Student/" + studentId)
+                .whereEqualTo("classId", "/Class/" + classId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            db.collection("ClassStudent").document(document.getId()).delete();
+                        }
+                    }
+                });
+
+        // Step 3: Check if the student is associated with any other classes
+        db.collection("ClassStudent")
+                .whereEqualTo("studentId", "/Student/" + studentId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        if (task.getResult().isEmpty()) {
+                            // Step 4: Delete student from the database
+                            db.collection("Student").document(studentId).delete();
+                        }
+                    }
+                });
+    }
 }

@@ -3,6 +3,8 @@ package com.wsofts.attendance;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,17 +18,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
-import java.text.SimpleDateFormat;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -43,6 +43,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
     private String classId;
     private String className;
     private BottomNavigationView bottomNavigationView;
+    private TextView emptyView; // New TextView for showing 'No attendance' message
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,10 +61,15 @@ public class ClassStudentAttendance extends AppCompatActivity {
         });
 
         setupRecyclerView();
+        setupEmptyView(); // Setup empty view
         fetchAttendanceData();
         setupToolbar();
         setupBottomNavigationView();
+    }
 
+    private void setupEmptyView() {
+        emptyView = findViewById(R.id.empty_view); // Reference to the empty view TextView
+        emptyView.setVisibility(View.GONE); // Hide it initially
     }
 
     private void setupToolbar() {
@@ -91,19 +97,16 @@ public class ClassStudentAttendance extends AppCompatActivity {
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             QuerySnapshot result = task.getResult();
-                            if (result != null) {
+                            if (result != null && !result.isEmpty()) {
                                 attendanceList.clear();
                                 List<String> dateHeaders = new ArrayList<>();
 
                                 for (DocumentSnapshot document : result) {
                                     DocumentReference studentRef = document.getDocumentReference("studentId");
-                                    Timestamp timestamp = document.getTimestamp("date");
+                                    String date = document.getString("date");
                                     String status = document.getString("status");
 
-                                    if (timestamp != null && studentRef != null) {
-                                        String dateString = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                                                .format(timestamp.toDate());
-
+                                    if (date != null && studentRef != null) {
                                         AttendanceModel attendanceModel = null;
                                         for (AttendanceModel model : attendanceList) {
                                             if (model.getStudentId().equals(studentRef)) {
@@ -130,17 +133,21 @@ public class ClassStudentAttendance extends AppCompatActivity {
                                             });
                                         }
 
-                                        if (!attendanceModel.getAttendanceStatusByDate().containsKey(dateString)) {
-                                            attendanceModel.getAttendanceStatusByDate().put(dateString, status);
-                                            if (!dateHeaders.contains(dateString)) {
-                                                dateHeaders.add(dateString);
+                                        if (!attendanceModel.getAttendanceStatusByDate().containsKey(date)) {
+                                            attendanceModel.getAttendanceStatusByDate().put(date, status);
+                                            if (!dateHeaders.contains(date)) {
+                                                dateHeaders.add(date);
                                             }
                                         }
                                     }
                                 }
-
+                                emptyView.setVisibility(View.GONE);
+                                attendanceRecyclerView.setVisibility(View.VISIBLE);
                                 attendanceAdapter = new AttendanceAdapter(attendanceList, dateHeaders, this);
                                 attendanceRecyclerView.setAdapter(attendanceAdapter);
+                            }else{
+                                emptyView.setVisibility(View.VISIBLE);
+                                attendanceRecyclerView.setVisibility(View.GONE);
                             }
                         } else {
                             Toast.makeText(ClassStudentAttendance.this, "Error fetching attendance data", Toast.LENGTH_SHORT).show();
@@ -150,6 +157,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
             Toast.makeText(this, "Class ID not found", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     private void setupBottomNavigationView() {
         bottomNavigationView = findViewById(R.id.bottom_navigation);
@@ -163,7 +171,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
                 finish();
                 return true;
             } else if (itemId == R.id.nav_add_students) {
-                //Open file picker to pick excel/csv file of students
+                // Open file picker to pick excel/csv file of students
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.setType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
                 startActivityForResult(intent, FILE_SELECT_CODE);
@@ -173,7 +181,6 @@ public class ClassStudentAttendance extends AppCompatActivity {
                 return false;
             }
         });
-
     }
 
     @Override
@@ -191,7 +198,6 @@ public class ClassStudentAttendance extends AppCompatActivity {
             }
         }
     }
-
 
     public void importExcelData(InputStream inputStream) {
         try {
@@ -234,32 +240,41 @@ public class ClassStudentAttendance extends AppCompatActivity {
                 DocumentReference studentRef = db.collection("Student").document(id);
                 DocumentReference classRef = db.collection("Class").document(classId);
                 studentRef.set(studentData).addOnSuccessListener(aVoid -> {
-                    // Add to ClassStudent collection
-                    Map<String, Object> classStudentData = new HashMap<>();
-                    classStudentData.put("classId", classRef);
-                    classStudentData.put("studentId", studentRef);
 
-                    db.collection("ClassStudent").add(classStudentData)
-                            .addOnSuccessListener(documentReference -> {
-                                // Success
-                                Toast.makeText(ClassStudentAttendance.this, "Data added successfully!", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e -> {
-                                // Handle failure
-                                Toast.makeText(ClassStudentAttendance.this, "Error adding ClassStudent data", Toast.LENGTH_SHORT).show();
+                    // Check if the student is already in the class
+                    db.collection("ClassStudent")
+                            .whereEqualTo("classId", classRef)
+                            .whereEqualTo("studentId", studentRef)
+                            .get()
+                            .addOnCompleteListener(task -> {
+                                if (task.isSuccessful() && task.getResult() != null && task.getResult().isEmpty()) {
+                                    // Student is not yet in the class, so add them
+                                    Map<String, Object> classStudentData = new HashMap<>();
+                                    classStudentData.put("classId", classRef);
+                                    classStudentData.put("studentId", studentRef);
+
+                                    db.collection("ClassStudent").add(classStudentData)
+                                            .addOnSuccessListener(documentReference -> {
+                                                // Success
+                                                Toast.makeText(ClassStudentAttendance.this, "Data imported successfully", Toast.LENGTH_SHORT).show();
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                // Failure
+                                                Toast.makeText(ClassStudentAttendance.this, "Failed to import data", Toast.LENGTH_SHORT).show();
+                                            });
+                                } else {
+                                    // Student is already in the class
+                                    Toast.makeText(ClassStudentAttendance.this, "Student " + name + " is already in this class.", Toast.LENGTH_SHORT).show();
+                                }
                             });
-                }).addOnFailureListener(e -> {
-                    // Handle failure
-                    Toast.makeText(ClassStudentAttendance.this, "Error adding Student data", Toast.LENGTH_SHORT).show();
                 });
             }
+
             workbook.close();
-        } catch (Exception e) {
+            inputStream.close();
+        } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(ClassStudentAttendance.this, "Error reading Excel file " + e.toString(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error reading file", Toast.LENGTH_SHORT).show();
         }
     }
-
-
-
 }

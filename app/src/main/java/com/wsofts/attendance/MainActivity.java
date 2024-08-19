@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private BottomNavigationView bottomNavigationView;
     private ClassesAdapter classesAdapter;
     private List<ClassModel> classList = new ArrayList<>();
+    private TextView noStudentsTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
+        noStudentsTextView = findViewById(R.id.noStudentsTextView);
         classesRecyclerView = findViewById(R.id.classes_recycler_view);
         classesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         classesAdapter = new ClassesAdapter(classList, this);
@@ -183,8 +186,11 @@ public class MainActivity extends AppCompatActivity {
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             QuerySnapshot result = task.getResult();
-                            if (result != null) {
-                                classList.clear();
+                            classList.clear(); // Clear the list before adding new data
+                            if (result != null && !result.isEmpty()) {
+                                noStudentsTextView.setVisibility(View.GONE);
+                                classesRecyclerView.setVisibility(View.VISIBLE);
+
                                 for (DocumentSnapshot document : result) {
                                     ClassModel classModel = document.toObject(ClassModel.class);
                                     if (classModel != null) {
@@ -192,8 +198,12 @@ public class MainActivity extends AppCompatActivity {
                                         classList.add(classModel);
                                     }
                                 }
-                                classesAdapter.notifyDataSetChanged();
+                            } else {
+                                // Show the no classes available message
+                                noStudentsTextView.setVisibility(View.VISIBLE);
+                                classesRecyclerView.setVisibility(View.GONE);
                             }
+                            classesAdapter.notifyDataSetChanged();
                         } else {
                             Toast.makeText(MainActivity.this, "Error fetching classes data", Toast.LENGTH_SHORT).show();
                         }
@@ -202,4 +212,5 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
         }
     }
+
 }

@@ -9,12 +9,12 @@ public class MarkAttendanceModel {
     private DocumentReference classId;
     private DocumentReference studentId;
     private String status;
-    private Date date;  // New field to store the attendance date
+    private String date;  // New field to store the attendance date
 
     public MarkAttendanceModel() {
     }
 
-    public MarkAttendanceModel(DocumentReference classId, DocumentReference studentId, String status, Date date) {
+    public MarkAttendanceModel(DocumentReference classId, DocumentReference studentId, String status, String date) {
         this.classId = classId;
         this.studentId = studentId;
         this.status = status;
@@ -45,11 +45,11 @@ public class MarkAttendanceModel {
         this.status = status;
     }
 
-    public Date getDate() {
+    public String getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(String date) {
         this.date = date;
     }
 }

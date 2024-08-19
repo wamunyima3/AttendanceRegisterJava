@@ -9,7 +9,6 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -34,6 +33,7 @@ public class MarkAttendance extends AppCompatActivity {
     private String classId;
     private String className;
     private Date currentDate;
+    private TextView noStudentsTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,15 +44,16 @@ public class MarkAttendance extends AppCompatActivity {
         className = getIntent().getStringExtra("className");
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            v.setPadding(insets.getInsets(WindowInsetsCompat.Type.systemBars()).left,
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars()).top,
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars()).right,
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom);
             return insets;
         });
 
         setupToolbar();
         setupRecyclerView();
         fetchStudentsData();
-
 
         Button saveButton = findViewById(R.id.markAttendanceSaveButton);
         saveButton.setOnClickListener(view -> checkAndSaveAttendance());
@@ -68,72 +69,83 @@ public class MarkAttendance extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
+        noStudentsTextView = findViewById(R.id.noStudentsTextView);
         markAttendanceRecyclerView = findViewById(R.id.markAttendanceRecyclerView);
         markAttendanceRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        markAttendanceAdapter = new MarkAttendanceAdapter(studentList, this);
+        markAttendanceAdapter = new MarkAttendanceAdapter(studentList, this, classId, currentDate);
         markAttendanceRecyclerView.setAdapter(markAttendanceAdapter);
     }
 
     private void fetchStudentsData() {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        if (classId != null) {
-            db.collection("ClassStudent")
-                    .whereEqualTo("classId", db.collection("Class").document(classId))
-                    .get()
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            QuerySnapshot result = task.getResult();
-                            if (result != null) {
-                                for (DocumentSnapshot document : result) {
-                                    DocumentReference studentRef = document.getDocumentReference("studentId");
-                                    if (studentRef != null) {
-                                        studentRef.get().addOnCompleteListener(studentTask -> {
-                                            if (studentTask.isSuccessful()) {
-                                                DocumentSnapshot studentDoc = studentTask.getResult();
-                                                if (studentDoc != null) {
-                                                    String studentName = studentDoc.getString("name");
-                                                    String studentId = studentRef.getId();
-
-                                                    studentList.add(new StudentModel(studentId, studentName));
-                                                    markAttendanceAdapter.notifyDataSetChanged();
-                                                }
+        db.collection("ClassStudent")
+                .whereEqualTo("classId", db.collection("Class").document(classId))
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        QuerySnapshot result = task.getResult();
+                        if (result != null && !result.isEmpty()) {
+                            for (DocumentSnapshot document : result) {
+                                DocumentReference studentRef = document.getDocumentReference("studentId");
+                                if (studentRef != null) {
+                                    studentRef.get().addOnCompleteListener(studentTask -> {
+                                        if (studentTask.isSuccessful()) {
+                                            DocumentSnapshot studentDoc = studentTask.getResult();
+                                            if (studentDoc != null) {
+                                                String studentName = studentDoc.getString("name");
+                                                String studentId = studentRef.getId();
+                                                studentList.add(new StudentModel(studentId, studentName));
+                                                markAttendanceAdapter.notifyDataSetChanged();
+                                                noStudentsTextView.setVisibility(View.GONE);
+                                                markAttendanceRecyclerView.setVisibility(View.VISIBLE);
                                             }
-                                        });
-                                    }
+                                        }
+                                    });
                                 }
                             }
                         } else {
-                            Toast.makeText(MarkAttendance.this, "Error fetching students data", Toast.LENGTH_SHORT).show();
+                            noStudentsTextView.setVisibility(View.VISIBLE);
+                            markAttendanceRecyclerView.setVisibility(View.GONE);
                         }
-                    });
-        } else {
-            Toast.makeText(this, "Class ID not found", Toast.LENGTH_SHORT).show();
-        }
+                    } else {
+                        Toast.makeText(MarkAttendance.this, "Error fetching students data", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void checkAndSaveAttendance() {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+        DocumentReference classRef = db.collection("Class").document(classId);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+        String dateId = dateFormat.format(currentDate);
+
+        // Add a new document to the ClassDays collection for this date if not already present
+        DocumentReference classDayRef = db.collection("ClassDays").document(dateId);
+        classDayRef.get().addOnCompleteListener(task -> {
+            if (!task.getResult().exists()) {
+                classDayRef.set(new ClassDayModel(classRef, dateId));
+            }
+        });
 
         for (StudentModel student : studentList) {
             String status = student.getAttendanceStatus();
             if (status != null) {
-                DocumentReference classRef = db.collection("Class").document(classId);
                 DocumentReference studentRef = db.collection("Student").document(student.getStudentId());
 
                 db.collection("Attendance")
                         .whereEqualTo("classId", classRef)
                         .whereEqualTo("studentId", studentRef)
-                        .whereEqualTo("date", currentDate)
+                        .whereEqualTo("date", dateId)
                         .get()
                         .addOnCompleteListener(task -> {
                             if (task.isSuccessful()) {
                                 if (task.getResult().isEmpty()) {
                                     // No existing record, save a new one
-                                    saveAttendanceRecord(classRef, studentRef, status);
+                                    saveAttendanceRecord(classRef, studentRef, status, dateId);
                                 } else {
-                                    // Record exists, allow editing or update
-                                    Toast.makeText(MarkAttendance.this, "Attendance already marked for today. You can edit it.", Toast.LENGTH_SHORT).show();
+                                    // Record exists, update it
+                                    updateAttendanceRecord(task.getResult().getDocuments().get(0).getId(), status);
                                 }
                             } else {
                                 Toast.makeText(MarkAttendance.this, "Error checking attendance", Toast.LENGTH_SHORT).show();
@@ -143,19 +155,36 @@ public class MarkAttendance extends AppCompatActivity {
         }
     }
 
-    private void saveAttendanceRecord(DocumentReference classRef, DocumentReference studentRef, String status) {
+    private void saveAttendanceRecord(DocumentReference classRef, DocumentReference studentRef, String status, String date) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         db.collection("Attendance")
-                .add(new MarkAttendanceModel(classRef, studentRef, status, currentDate))
+                .add(new MarkAttendanceModel(classRef, studentRef, status, date))
                 .addOnSuccessListener(documentReference -> {
                     Toast.makeText(MarkAttendance.this, "Attendance saved!", Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(this, ClassStudentAttendance.class);
-                    intent.putExtra("classId", classId);
-                    intent.putExtra("className", className);
-                    startActivity(intent);
-                    finish();
+                    navigateToClassStudentAttendance();
                 })
                 .addOnFailureListener(e -> Toast.makeText(MarkAttendance.this, "Error saving attendance", Toast.LENGTH_SHORT).show());
     }
+
+    private void updateAttendanceRecord(String attendanceId, String status) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("Attendance")
+                .document(attendanceId)
+                .update("status", status)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(MarkAttendance.this, "Attendance updated!", Toast.LENGTH_SHORT).show();
+                    navigateToClassStudentAttendance();
+                })
+                .addOnFailureListener(e -> Toast.makeText(MarkAttendance.this, "Error updating attendance", Toast.LENGTH_SHORT).show());
+    }
+
+    private void navigateToClassStudentAttendance() {
+        Intent intent = new Intent(this, ClassStudentAttendance.class);
+        intent.putExtra("classId", classId);
+        intent.putExtra("className", className);
+        startActivity(intent);
+        finish();
+    }
 }
+

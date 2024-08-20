@@ -12,6 +12,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
@@ -54,15 +55,70 @@ public class ClassesAdapter extends RecyclerView.Adapter<ClassesAdapter.ClassVie
 
         holder.deleteButton.setOnClickListener(v -> {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            db.collection("Class").document(classModel.getClassId())
-                    .delete()
-                    .addOnSuccessListener(aVoid -> {
-                        classList.remove(position);
-                        notifyItemRemoved(position);
-                        notifyItemRangeChanged(position, classList.size());
-                    })
-                    .addOnFailureListener(e -> Toast.makeText(context, "Failed to delete class", Toast.LENGTH_SHORT).show());
+
+            // Get the class ID
+            String classId = classModel.getClassId();
+
+            // Start deleting related data
+            db.collection("Class").document(classId).delete().addOnSuccessListener(aVoid -> {
+                // Step 1: Delete Class-Student Associations
+                db.collection("ClassStudent")
+                        .whereEqualTo("classId", classId)
+                        .get()
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                for (DocumentSnapshot document : task.getResult().getDocuments()) {
+                                    String studentId = document.getString("studentId");
+                                    document.getReference().delete(); // Delete the ClassStudent document
+
+                                    // Check if the student is associated with any other class
+                                    db.collection("ClassStudent")
+                                            .whereEqualTo("studentId", studentId)
+                                            .get()
+                                            .addOnCompleteListener(studentTask -> {
+                                                if (studentTask.isSuccessful() && studentTask.getResult().isEmpty()) {
+                                                    // The student is not associated with any other class, delete them
+                                                    db.collection("Student").document(studentId).delete();
+                                                }
+                                            });
+                                }
+                            }
+                        });
+
+                // Step 2: Delete Class Days
+                db.collection("ClassDays") // Replace with your actual collection name
+                        .whereEqualTo("classId", classId)
+                        .get()
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                for (DocumentSnapshot document : task.getResult().getDocuments()) {
+                                    document.getReference().delete(); // Delete ClassDay document
+                                }
+                            }
+                        });
+
+                // Step 3: Delete Attendance Records
+                db.collection("Attendance")
+                        .whereEqualTo("classId", classId)
+                        .get()
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                for (DocumentSnapshot document : task.getResult().getDocuments()) {
+                                    document.getReference().delete(); // Delete Attendance document
+                                }
+                            }
+                        });
+
+                // Step 4: Notify user and remove the class from the list
+                classList.remove(position);
+                notifyItemRemoved(position);
+                notifyItemRangeChanged(position, classList.size());
+                Toast.makeText(context, "Class and related data deleted successfully", Toast.LENGTH_SHORT).show();
+            }).addOnFailureListener(e -> {
+                Toast.makeText(context, "Failed to delete class", Toast.LENGTH_SHORT).show();
+            });
         });
+
     }
 
     @Override

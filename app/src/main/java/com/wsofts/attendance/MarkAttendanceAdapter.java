@@ -49,13 +49,13 @@ public class MarkAttendanceAdapter extends RecyclerView.Adapter<MarkAttendanceAd
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         DocumentReference classRef = db.collection("Class").document(classId);
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
-        String dateId = dateFormat.format(currentDate);
+        String formattedDate = dateFormat.format(currentDate); // Use the formatted date for attendance check
         DocumentReference studentRef = db.collection("Student").document(student.getStudentId());
 
         db.collection("Attendance")
                 .whereEqualTo("classId", classRef)
                 .whereEqualTo("studentId", studentRef)
-                .whereEqualTo("date", dateId)
+                .whereEqualTo("date", formattedDate)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && !task.getResult().isEmpty()) {
@@ -74,12 +74,11 @@ public class MarkAttendanceAdapter extends RecyclerView.Adapter<MarkAttendanceAd
                                     break;
                                 case "S":
                                     holder.sickRadioButton.setChecked(true);
-                                break;
+                                    break;
                             }
                         }
                     }
                 });
-
 
         holder.attendanceStatus.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == holder.presentRadioButton.getId()) {
@@ -88,11 +87,12 @@ public class MarkAttendanceAdapter extends RecyclerView.Adapter<MarkAttendanceAd
                 student.setAttendanceStatus("A");
             } else if (checkedId == holder.absentWithPermissionRadioButton.getId()) {
                 student.setAttendanceStatus("AP");
-            }else if (checkedId == holder.sickRadioButton.getId()){
+            } else if (checkedId == holder.sickRadioButton.getId()) {
                 student.setAttendanceStatus("S");
             }
         });
     }
+
 
     @Override
     public int getItemCount() {

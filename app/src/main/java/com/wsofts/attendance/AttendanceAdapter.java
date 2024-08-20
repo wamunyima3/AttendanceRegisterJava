@@ -1,11 +1,11 @@
 package com.wsofts.attendance;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -24,11 +24,13 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
     private final List<AttendanceModel> attendanceList;
     private final List<String> dateHeaders; // List of dates to be displayed as columns
     private final Context context;
+    private final String classId;
 
-    public AttendanceAdapter(List<AttendanceModel> attendanceList, List<String> dateHeaders, Context context) {
+    public AttendanceAdapter(List<AttendanceModel> attendanceList, List<String> dateHeaders, String classId, Context context) {
         this.attendanceList = attendanceList;
         this.dateHeaders = dateHeaders;
         this.context = context;
+        this.classId = classId;
     }
 
     @NonNull
@@ -54,8 +56,8 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
             notifyItemRemoved(position);
             notifyItemRangeChanged(position, attendanceList.size());
 
-            // Implement Firebase deletion logic
-            deleteStudentFromClass(attendanceModel.getStudentId().getId(), attendanceModel.getClassId().getId());
+            // Delete the student from Firebase
+            deleteStudentFromClass(attendanceModel.getStudentId().getId(), classId);
         });
 
     }
@@ -80,43 +82,49 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
 
     private void deleteStudentFromClass(String studentId, String classId) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+        DocumentReference studentRef = db.collection("Student").document(studentId);
+        DocumentReference classRef = db.collection("Class").document(classId);
 
-        // Step 1: Delete student from attendance records
+        // Step 1: Delete all attendance records for this student in the class
         db.collection("Attendance")
-                .whereEqualTo("studentId", "/Student/" + studentId)
-                .whereEqualTo("classId", "/Class/" + classId)
+                .whereEqualTo("classId", classRef)
+                .whereEqualTo("studentId", studentRef)
                 .get()
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
+                    if (task.isSuccessful() && task.getResult() != null) {
                         for (QueryDocumentSnapshot document : task.getResult()) {
-                            db.collection("Attendance").document(document.getId()).delete();
+                            document.getReference().delete();
                         }
                     }
                 });
 
-        // Step 2: Remove student from the class
+        // Step 2: Delete the student from the ClassStudent collection
         db.collection("ClassStudent")
-                .whereEqualTo("studentId", "/Student/" + studentId)
-                .whereEqualTo("classId", "/Class/" + classId)
+                .whereEqualTo("classId", classRef)
+                .whereEqualTo("studentId", studentRef)
                 .get()
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
+                    if (task.isSuccessful() && task.getResult() != null) {
                         for (QueryDocumentSnapshot document : task.getResult()) {
-                            db.collection("ClassStudent").document(document.getId()).delete();
+                            document.getReference().delete();
                         }
-                    }
-                });
 
-        // Step 3: Check if the student is associated with any other classes
-        db.collection("ClassStudent")
-                .whereEqualTo("studentId", "/Student/" + studentId)
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        if (task.getResult().isEmpty()) {
-                            // Step 4: Delete student from the database
-                            db.collection("Student").document(studentId).delete();
-                        }
+                        // Step 3: Check if the student is associated with any other classes
+                        db.collection("ClassStudent")
+                                .whereEqualTo("studentId", studentRef)
+                                .get()
+                                .addOnCompleteListener(classTask -> {
+                                    if (classTask.isSuccessful() && classTask.getResult() != null && classTask.getResult().isEmpty()) {
+                                        // Step 4: If not associated with any other classes, delete the student from the Student collection
+                                        studentRef.delete()
+                                                .addOnSuccessListener(aVoid -> {
+                                                    Toast.makeText(context, "Student deleted successfully", Toast.LENGTH_SHORT).show();
+                                                })
+                                                .addOnFailureListener(e -> {
+                                                    Toast.makeText(context, "Failed to delete student", Toast.LENGTH_SHORT).show();
+                                                });
+                                    }
+                                });
                     }
                 });
     }

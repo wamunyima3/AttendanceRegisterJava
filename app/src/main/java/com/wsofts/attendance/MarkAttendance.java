@@ -118,42 +118,47 @@ public class MarkAttendance extends AppCompatActivity {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         DocumentReference classRef = db.collection("Class").document(classId);
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
-        String dateId = dateFormat.format(currentDate);
+        String formattedDate = dateFormat.format(currentDate);
 
-        // Add a new document to the ClassDays collection for this date if not already present
-        DocumentReference classDayRef = db.collection("ClassDays").document(dateId);
-        classDayRef.get().addOnCompleteListener(task -> {
-            if (!task.getResult().exists()) {
-                classDayRef.set(new ClassDayModel(classRef, dateId));
-            }
-        });
+        // Add a new document to the ClassDays collection with an auto-generated ID
+        db.collection("ClassDays")
+                .add(new ClassDayModel(classRef, formattedDate))
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        DocumentReference classDayRef = task.getResult(); // Reference to the auto-generated document
 
-        for (StudentModel student : studentList) {
-            String status = student.getAttendanceStatus();
-            if (status != null) {
-                DocumentReference studentRef = db.collection("Student").document(student.getStudentId());
+                        for (StudentModel student : studentList) {
+                            String status = student.getAttendanceStatus();
+                            if (status != null) {
+                                DocumentReference studentRef = db.collection("Student").document(student.getStudentId());
 
-                db.collection("Attendance")
-                        .whereEqualTo("classId", classRef)
-                        .whereEqualTo("studentId", studentRef)
-                        .whereEqualTo("date", dateId)
-                        .get()
-                        .addOnCompleteListener(task -> {
-                            if (task.isSuccessful()) {
-                                if (task.getResult().isEmpty()) {
-                                    // No existing record, save a new one
-                                    saveAttendanceRecord(classRef, studentRef, status, dateId);
-                                } else {
-                                    // Record exists, update it
-                                    updateAttendanceRecord(task.getResult().getDocuments().get(0).getId(), status);
-                                }
-                            } else {
-                                Toast.makeText(MarkAttendance.this, "Error checking attendance", Toast.LENGTH_SHORT).show();
+                                // Check for existing attendance record
+                                db.collection("Attendance")
+                                        .whereEqualTo("classId", classRef)
+                                        .whereEqualTo("studentId", studentRef)
+                                        .whereEqualTo("date", formattedDate)
+                                        .get()
+                                        .addOnCompleteListener(attendanceTask -> {
+                                            if (attendanceTask.isSuccessful()) {
+                                                if (attendanceTask.getResult().isEmpty()) {
+                                                    // No existing record, save a new one
+                                                    saveAttendanceRecord(classRef, studentRef, status, formattedDate);
+                                                } else {
+                                                    // Record exists, update it
+                                                    updateAttendanceRecord(attendanceTask.getResult().getDocuments().get(0).getId(), status);
+                                                }
+                                            } else {
+                                                Toast.makeText(MarkAttendance.this, "Error checking attendance", Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
                             }
-                        });
-            }
-        }
+                        }
+                    } else {
+                        Toast.makeText(MarkAttendance.this, "Error saving class day", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
+
 
     private void saveAttendanceRecord(DocumentReference classRef, DocumentReference studentRef, String status, String date) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();

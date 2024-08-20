@@ -81,7 +81,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
     private void setupRecyclerView() {
         attendanceRecyclerView = findViewById(R.id.attendance_recycler_view);
         attendanceRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        attendanceAdapter = new AttendanceAdapter(new ArrayList<>(), new ArrayList<>(), this);
+        attendanceAdapter = new AttendanceAdapter(new ArrayList<>(), new ArrayList<>(), classId,this);
         attendanceRecyclerView.setAdapter(attendanceAdapter);
     }
 
@@ -143,7 +143,7 @@ public class ClassStudentAttendance extends AppCompatActivity {
                                 }
                                 emptyView.setVisibility(View.GONE);
                                 attendanceRecyclerView.setVisibility(View.VISIBLE);
-                                attendanceAdapter = new AttendanceAdapter(attendanceList, dateHeaders, this);
+                                attendanceAdapter = new AttendanceAdapter(attendanceList, dateHeaders, classId, this);
                                 attendanceRecyclerView.setAdapter(attendanceAdapter);
                             }else{
                                 emptyView.setVisibility(View.VISIBLE);

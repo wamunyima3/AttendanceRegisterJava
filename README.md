@@ -76,8 +76,7 @@ To use this project, you need to set up the following Firebase Firestore collect
 
 ## Sample APK
 
-For a quick preview of the app, you can download the [sample APK here](https://drive.google.com/file/d/10a1UGOKLBwwtSmBjNCAtcGtJ01f5uiGW/view?usp=drive_link) (link to be added).
-
+For a quick preview of the app, you can download the [sample APK here](https://drive.google.com/file/d/10a1UGOKLBwwtSmBjNCAtcGtJ01f5uiGW/view?usp=drive_link)
 ## Contributing
 
 Feel free to submit issues or pull requests to improve the app. Contributions are always welcome!

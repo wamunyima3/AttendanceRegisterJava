@@ -13,6 +13,9 @@
         android:theme="@style/Theme.Attendance"
         tools:targetApi="31">
         <activity
+            android:name=".StudentAttendanceDetails"
+            android:exported="false" />
+        <activity
             android:name=".Settings"
             android:exported="false" />
         <activity

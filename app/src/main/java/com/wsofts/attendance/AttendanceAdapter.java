@@ -1,6 +1,7 @@
 package com.wsofts.attendance;
 
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -50,6 +51,15 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
         holder.dateRecyclerView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false));
         holder.dateRecyclerView.setAdapter(dateAdapter);
 
+        // Set click listener for navigation to the details page
+        holder.itemView.setOnClickListener(v -> {
+            // Create an intent to navigate to the details page
+            Intent intent = new Intent(context, StudentAttendanceDetails.class);
+            intent.putExtra("studentId", attendanceModel.getStudentId().getId());
+            intent.putExtra("classId", classId);
+            context.startActivity(intent);
+        });
+
         holder.deleteButton.setOnClickListener(v -> {
             // Remove item from list
             attendanceList.remove(position);
@@ -59,8 +69,8 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.At
             // Delete the student from Firebase
             deleteStudentFromClass(attendanceModel.getStudentId().getId(), classId);
         });
-
     }
+
 
     @Override
     public int getItemCount() {
